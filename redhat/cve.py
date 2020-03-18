@@ -1,3 +1,5 @@
+import datetime
+
 class Bugzilla:
 	"""
 	Default class for a Red Hat's Bugzilla listing.
@@ -134,44 +136,72 @@ class CVE:
 	upstream_fix:
 		The version of the upstream project that fixes the flaw.
 	"""
-	def __init__(self, data):
-		#print(data)
+	def __init__(self, data, passthrough=None):
+		self.passthrough = passthrough
+		if self.passthrough:
+			return
 		self.name = data['name']
 		self.threat_severity = data.get('threat_severity', None)
 		self.public_date = data.get('public_date', None)
-		self.bugzilla = Bugzilla(data['bugzilla'])
+		self.bugzilla = Bugzilla(data['bugzilla']) if data.get('bugzilla') else None
 		try:
 			self.cvss = CVSSv2(data['cvss'])
 		except KeyError:
-			self.cvss = CVSSv3(data['cvss3'])
+			self.cvss = CVSSv3(data['cvss3']) if data.get('cvss3') else None
 		self.cwe = data.get('cwe', None)
 		self.details = ' '.join([detail.strip() for detail in data['details']])
 		self.statement = data.get('statement', None)
 		self.affected_releases = [Release(release) for release in data['affected_release']] if data.get('affected_release') else []
 		self.package_states = [PackageState(package_state) for package_state in data['package_state']] if data.get('package_state') else []
+		self.in_fork = False
+
 		# self.references = data.get('references', None)
 		# self.acknowledgements = data.get('acknowledgements', None)
 		# self.mitigation = data.get('mitigation', None)
 		# self.upstream_fix = data.get('upstream_fix', None)
 
 	def to_dict(self):
+		if self.passthrough:
+			output = {
+				'CVE ID': self.passthrough,
+				'Headline': None,
+				'CVSS Score': None,
+				'RH Impact': None,
+				'RHEL 7': None,
+				'RHEL 7.6 EUS': None,
+				'RHEL 8': None,
+				'Notes': "A CVE with this ID was not found on the Redhat Database."
+			}
+			return output
 		output = {
 			'CVE ID': self.name,
 			'Headline': self.details,
-			'CVSS Score': self.cvss.base_score,
+			'CVSS Score': self.cvss.base_score if self.cvss else None,
 			'RH Impact': self.threat_severity,
 		}
 		all_states = {}
 		for state in self.package_states:
 			all_states[state.product_name.replace('Red Hat Enterprise Linux', 'RHEL').replace('Extended Update Support', 'EUS')] = state.fix_state
 		for release in self.affected_releases:
-			all_states[release.product_name.replace('Red Hat Enterprise Linux', 'RHEL').replace('Extended Update Support', 'EUS')] = 'Fixed'
+			pname = release.product_name.replace('Red Hat Enterprise Linux', 'RHEL').replace('Extended Update Support', 'EUS')
+			all_states[pname] = 'Fixed'
+			if pname == 'RHEL 7':
+				date = datetime.datetime.strptime(release.release_date[:10], '%Y-%m-%d')
+				if date <= datetime.datetime.strptime("2019-08-05", '%Y-%m-%d'):
+					self.in_fork = True
 		for package in ['RHEL 7.6 EUS', 'RHEL 7', 'RHEL 8']:
 			if package in all_states:
 				output[package] = all_states[package]
 			elif all_states.get('RHEL 5') == 'Fixed' or all_states.get('RHEL 6') == 'Fixed':
 				output[package] = 'Not Affected'
+			elif package == "RHEL 7.6 EUS" and self.in_fork:
+				output[package] = "Fixed"
+			elif package == "RHEL 8" and "RHEL 7" in all_states:
+				output[package] = all_states["RHEL 7"]
 			else:
-				output[package] = 'TBD'
+				if self.threat_severity in ("high", "critical"):
+					output[package] = 'TBD'
+				else:
+					output[package] = "Assume WNF"
 		output['Notes'] = ''
 		return output

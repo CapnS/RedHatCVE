@@ -57,8 +57,6 @@ class Client:
 		
 		Raises
 		------------
-		~redhat.NotFound
-			A CVE with the name passed was not found.
 		~FileNotFoundError
 			The input file (.csv) was not found. 
 
@@ -68,16 +66,26 @@ class Client:
 			Either a list of the CVEs or the DataFrame that was written if set to output as csv.
 		"""
 		t = time.perf_counter()
-		df = pandas.read_csv(filename)
+		df = pandas.read_csv(filename, encoding="ISO-8859-1")
 		output = []
-		for i, name in enumerate(df[column]):
-			data = self.http.fetch_cve(name)
-			if data.get('message'):
-				print(name, data['message'])
+		for name in df[column]:
+			if str(name) == "nan":
+				continue
+			if len(str(name).split(",")) > 1:
+				for cve in name.split(","):
+					data = self.http.fetch_cve(cve)
+					if data.get('message'):
+						output.append(CVE(data, cve))
+					else:
+						output.append(CVE(data))
 			else:
-				output.append(CVE(data))
-			if not (i + 1) % 25:
-				print(f'{i+1} CVEs done, {round(time.perf_counter() - t, 2)} seconds passed')
+				data = self.http.fetch_cve(name)
+				if data.get('message'):
+					output.append(CVE(data, name))
+				else:
+					output.append(CVE(data))
+			if not len(output) % 25:
+				print(f'{len(output)} CVEs done, {round(time.perf_counter() - t, 2)} seconds passed')
 		if not output_filename:
 			print(f'Finished Parsing, {round(time.perf_counter() - t, 2)} seconds passed')
 			return output
