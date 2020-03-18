@@ -170,7 +170,7 @@ class CVE:
 				'RHEL 7': None,
 				'RHEL 7.6 EUS': None,
 				'RHEL 8': None,
-				'Notes': "A CVE with this ID was not found on the Redhat Database."
+				'Notes': 'A CVE with this ID was not found on the Redhat Database.'
 			}
 			return output
 		output = {
@@ -187,21 +187,21 @@ class CVE:
 			all_states[pname] = 'Fixed'
 			if pname == 'RHEL 7':
 				date = datetime.datetime.strptime(release.release_date[:10], '%Y-%m-%d')
-				if date <= datetime.datetime.strptime("2019-08-05", '%Y-%m-%d'):
+				if date <= datetime.datetime.strptime('2019-08-05', '%Y-%m-%d'):
 					self.in_fork = True
 		for package in ['RHEL 7.6 EUS', 'RHEL 7', 'RHEL 8']:
 			if package in all_states:
 				output[package] = all_states[package]
 			elif all_states.get('RHEL 5') == 'Fixed' or all_states.get('RHEL 6') == 'Fixed':
 				output[package] = 'Not Affected'
-			elif package == "RHEL 7.6 EUS" and self.in_fork:
-				output[package] = "Fixed"
-			elif package == "RHEL 8" and "RHEL 7" in all_states:
-				output[package] = all_states["RHEL 7"]
+			elif package == 'RHEL 7.6 EUS' and self.in_fork:
+				output[package] = 'Fixed'
+			elif package == 'RHEL 8' and 'RHEL 7' in all_states:
+				output[package] = all_states['RHEL 7']
 			else:
-				if self.threat_severity in ("high", "critical"):
+				if self.threat_severity in ('high', 'critical'):
 					output[package] = 'TBD'
 				else:
-					output[package] = "Assume WNF"
+					output[package] = 'Assume WNF'
 		output['Notes'] = ''
 		return output

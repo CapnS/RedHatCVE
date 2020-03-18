@@ -66,13 +66,13 @@ class Client:
 			Either a list of the CVEs or the DataFrame that was written if set to output as csv.
 		"""
 		t = time.perf_counter()
-		df = pandas.read_csv(filename, encoding="ISO-8859-1")
+		df = pandas.read_csv(filename, encoding='ISO-8859-1')
 		output = []
 		for name in df[column]:
-			if str(name) == "nan":
+			if str(name) == 'nan':
 				continue
-			if len(str(name).split(",")) > 1:
-				for cve in name.split(","):
+			if len(str(name).split(',')) > 1:
+				for cve in name.split(','):
 					data = self.http.fetch_cve(cve)
 					if data.get('message'):
 						output.append(CVE(data, cve))
