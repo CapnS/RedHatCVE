@@ -67,9 +67,12 @@ class Client:
 		"""
 		t = time.perf_counter()
 		df = pandas.read_csv(filename, encoding='ISO-8859-1')
+		total = 0
+		for cve in df[column]:
+			total += len(str(cve).split(','))
 		output = []
 		for name in df[column]:
-			if str(name) == 'nan':
+			if str(name) == 'nan' or not str(name).startswith('CVE'):
 				continue
 			if len(str(name).split(',')) > 1:
 				for cve in name.split(','):
@@ -85,7 +88,7 @@ class Client:
 				else:
 					output.append(CVE(data))
 			if not len(output) % 25:
-				print(f'{len(output)} CVEs done, {round(time.perf_counter() - t, 2)} seconds passed')
+				print(f'{len(output)}/{total} CVEs done, {round(time.perf_counter() - t, 2)} seconds passed')
 		if not output_filename:
 			print(f'Finished Parsing, {round(time.perf_counter() - t, 2)} seconds passed')
 			return output

@@ -196,36 +196,41 @@ class CVE:
 				output[package] = all_states[package]
 			elif package == 'RHEL 7.6 EUS' and self.in_fork:
 				output[package] = 'Fixed'
-				
 			elif package == 'RHEL 7.6 EUS' and output['RHEL 7 RHSA'] and not self.in_fork:
 				output[package] = "TBD"
-			elif package == 'RHEL 7.6 EUS' and all_states.get('RHEL 7') == 'Not Affected':
-				output[package] = 'Not Affected'
-			elif all_states.get('RHEL 5') in ('Fixed', 'Not Affected') or all_states.get('RHEL 6') in ('Fixed', 'Not Affected'):
-				output[package] = 'Not Affected'
+			elif package == 'RHEL 7.6 EUS' and all_states.get('RHEL 7') == 'Not affected':
+				output[package] = 'Not affected'
+			elif all_states.get('RHEL 5') in ('Fixed', 'Not affected') or all_states.get('RHEL 6') in ('Fixed', 'Not affected'):
+				output[package] = 'Not affected'
 			elif package == 'RHEL 8' and 'RHEL 7' in all_states:
 				output[package] = all_states['RHEL 7']
 			else:
-				if self.threat_severity in ('high', 'critical'):
+				if self.threat_severity in ('High', 'Critical', 'Important'):
 					output[package] = 'TBD'
 				else:
 					output[package] = 'Assume WNF'
 		if output['RHEL 7.6 EUS'] == 'Fixed':
 			output['CDETS State'] = 'Resolved'
-			state = 'is fixed in'
-		elif output['RHEL 7.6 EUS'] == 'Not Affected':
+			state = 'They indicate that this bug is fixed in'
+		elif output['RHEL 7.6 EUS'] == 'Not affected':
 			output['CDETS State'] = 'Junk'
-			state = 'does not affect'
-		elif output['RHEL 7.6 EUS'] in ('Assume WNF', 'Will not fix'):
+			state = 'They indicate that this bug does not affect'
+		elif output['RHEL 7.6 EUS'] in ('Assume WNF', 'Will not fix', 'Fix deffered'):
 			output['CDETS State'] = 'Closed'
-			state = 'will not be fixed in'
-		elif output['RHEL 7.6 EUS'] in ('Under Investigation', 'Affected'):
+			state = 'They indicate that this bug will not be fixed in'
+		elif output['RHEL 7.6 EUS'] in ('Under investigation', 'Affected'):
 			output['CDETS State'] = 'Hold'
-			state = 'is still under investigation for'
+			state = 'They indicate that this bug is still under investigation for'
+		elif output['RHEL 7.6 EUS'] == 'TBD':
+			output['CDETS State'] = 'Hold'
+			if self.threat_severity in ('Medium', 'Low'):
+				state = 'Patch availability is still TBD for'
+			else:
+				state = 'We can assume that Red Hat will not fix this in'
 		if output['RHEL 8'] == 'Fixed':
 			cvim = 'The patch is available in RHEL 8 and CVIM will pick it up in version 4.0. '
 		else:
 			cvim = ''
-		output['Comments'] = f'Red Hat rates this CVE with {self.threat_severity} severity. They indicate that this bug {state} RHEL 7.6 EUS. {cvim}More information can be found online at https://access.redhat.com/security/cve/{self.name}.'
+		output['Comments'] = f'Red Hat rates this CVE with {self.threat_severity} severity. {state} RHEL 7.6 EUS. {cvim}More information can be found online at https://access.redhat.com/security/cve/{self.name}.'
 		output['Notes'] = ''
 		return output
