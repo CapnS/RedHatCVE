@@ -96,6 +96,51 @@ class Client:
 	def to_csv(self, cves, output_filename, t):
 		output = [cve.to_dict() for cve in cves]
 		df = pandas.DataFrame(output)
-		df.to_csv(output_filename)
+		df.to_csv(output_filename, encoding='utf-8')
 		print(f'Finished writing data. Total Time Passed: {round(time.perf_counter() - t, 2)} seconds.')
 		return df
+
+	def generate_report(self, output_filename, *filenames):
+		"""
+		Generates a report of CVEs that do not have their package states properly listed on the RedHat Database.
+
+		Parameters
+		------------
+		output_filename: :class:`str`
+			Filename (.csv) to write the output to.
+		filenames: Union[:class:`str`, List[:class:`str`]]
+			Filenames of the output .csv to use in writing the report.
+
+		Raises
+		------------
+		~FileNotFoundError
+			The input file (.csv) was not found. 
+
+		Returns
+		------------
+		Union[List[:class:`~redhat.CVE`], :class:`pandas.DataFrame`]
+			Either a list of the CVEs or the DataFrame that was written if set to output as csv.
+		"""
+		output = []
+		for f in filenames:
+			df = pandas.read_csv(f)
+			for _, cve in df.iterrows():
+				if str(cve['Notes']).startswith('A CVE with this ID'):
+					continue
+				out = {
+					'CVE ID': cve['CVE ID'],
+					'Severity': cve['RH Impact'],
+					'RHEL 7 RHSA': cve['RHEL 7 RHSA']
+				}
+				add = False
+				for package in ('RHEL 7', 'RHEL 7.6 EUS'):
+					if cve[package] == 'TBD':
+						out[package] = 'Needs Mark'
+						add = True
+					else:
+						out[package] = cve[package]
+				if out not in output and add == True:
+					output.append(out)
+		sortedoutput = sorted(output, key=lambda x: str(x['Severity']))
+		outdf = pandas.DataFrame(sortedoutput)
+		outdf.to_csv(output_filename)

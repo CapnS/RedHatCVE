@@ -178,6 +178,7 @@ class CVE:
 			'Headline': self.details,
 			'CVSS Score': self.cvss.base_score if self.cvss else None,
 			'RH Impact': self.threat_severity,
+			'RHEL 7 RHSA': None
 		}
 		all_states = {}
 		for state in self.package_states:
@@ -189,13 +190,19 @@ class CVE:
 				date = datetime.datetime.strptime(release.release_date[:10], '%Y-%m-%d')
 				if date <= datetime.datetime.strptime('2019-08-05', '%Y-%m-%d'):
 					self.in_fork = True
-		for package in ['RHEL 7.6 EUS', 'RHEL 7', 'RHEL 8']:
+				output['RHEL 7 RHSA'] = release.advisory
+		for package in ['RHEL 7', 'RHEL 7.6 EUS', 'RHEL 8']:
 			if package in all_states:
 				output[package] = all_states[package]
-			elif all_states.get('RHEL 5') == 'Fixed' or all_states.get('RHEL 6') == 'Fixed':
-				output[package] = 'Not Affected'
 			elif package == 'RHEL 7.6 EUS' and self.in_fork:
 				output[package] = 'Fixed'
+				
+			elif package == 'RHEL 7.6 EUS' and output['RHEL 7 RHSA'] and not self.in_fork:
+				output[package] = "TBD"
+			elif package == 'RHEL 7.6 EUS' and all_states.get('RHEL 7') == 'Not Affected':
+				output[package] = 'Not Affected'
+			elif all_states.get('RHEL 5') in ('Fixed', 'Not Affected') or all_states.get('RHEL 6') in ('Fixed', 'Not Affected'):
+				output[package] = 'Not Affected'
 			elif package == 'RHEL 8' and 'RHEL 7' in all_states:
 				output[package] = all_states['RHEL 7']
 			else:
@@ -203,5 +210,22 @@ class CVE:
 					output[package] = 'TBD'
 				else:
 					output[package] = 'Assume WNF'
+		if output['RHEL 7.6 EUS'] == 'Fixed':
+			output['CDETS State'] = 'Resolved'
+			state = 'is fixed in'
+		elif output['RHEL 7.6 EUS'] == 'Not Affected':
+			output['CDETS State'] = 'Junk'
+			state = 'does not affect'
+		elif output['RHEL 7.6 EUS'] in ('Assume WNF', 'Will not fix'):
+			output['CDETS State'] = 'Closed'
+			state = 'will not be fixed in'
+		elif output['RHEL 7.6 EUS'] in ('Under Investigation', 'Affected'):
+			output['CDETS State'] = 'Hold'
+			state = 'is still under investigation for'
+		if output['RHEL 8'] == 'Fixed':
+			cvim = 'The patch is available in RHEL 8 and CVIM will pick it up in version 4.0. '
+		else:
+			cvim = ''
+		output['Comments'] = f'Red Hat rates this CVE with {self.threat_severity} severity. They indicate that this bug {state} RHEL 7.6 EUS. {cvim}More information can be found online at https://access.redhat.com/security/cve/{self.name}.'
 		output['Notes'] = ''
 		return output
