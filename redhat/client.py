@@ -69,6 +69,8 @@ class Client:
 		df = pandas.read_csv(filename, encoding='ISO-8859-1')
 		total = 0
 		for cve in df[column]:
+			if str(cve) == 'nan' or not str(cve).startswith('CVE'):
+				continue
 			total += len(str(cve).split(','))
 		output = []
 		for name in df[column]:
