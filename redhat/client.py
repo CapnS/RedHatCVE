@@ -118,8 +118,8 @@ class Client:
 
 		Returns
 		------------
-		Union[List[:class:`~redhat.CVE`], :class:`pandas.DataFrame`]
-			Either a list of the CVEs or the DataFrame that was written if set to output as csv.
+		:class:`pandas.DataFrame`
+			The DataFrame that was generated and written to the output file.
 		"""
 		output = []
 		for f in filenames:
@@ -144,3 +144,4 @@ class Client:
 		sortedoutput = sorted(output, key=lambda x: str(x['Severity']))
 		outdf = pandas.DataFrame(sortedoutput)
 		outdf.to_csv(output_filename)
+		return outdf
